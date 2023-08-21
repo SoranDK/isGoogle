@@ -34,23 +34,53 @@ function ip6_in_range( $ip, $range ) {
 }
 
 function is_google( $ip ) {
+    $check2 = FALSE;
     $is_google = FALSE;
-    $bot_json = 'https://developers.google.com/static/search/apis/ipranges/googlebot.json';
-    $json_file = file_get_contents($bot_json); //data read from json file
-    $json_data = json_decode($json_file, true);  //data decoded
-    $bot_ranges = $json_data['prefixes']; //ranges retrived
-
-    foreach ($bot_ranges as $range) {
-        if (isset($range['ipv4Prefix'])) {
-            if(ip4_in_range($ip, $range['ipv4Prefix'])==TRUE) {
-                $is_google = TRUE;
-            }
+    if (gethostbyaddr($ip) == $ip) {
+        $check2 = TRUE;
+    } else {
+        if (strpos(gethostbyaddr($ip), "googlebot") !== false) {
+            $is_google = TRUE;
         } else {
-            if(ip6_in_range($ip, $range['ipv6Prefix'])==TRUE) {
-                $is_google = TRUE;
-            }
+            $check2 = TRUE;
         }
     }
+
+    if ($check2 == TRUE) {
+        $bot_json = 'https://developers.google.com/static/search/apis/ipranges/googlebot.json';
+        $json_file = file_get_contents($bot_json); //data read from json file
+        $json_data = json_decode($json_file, true);  //data decoded
+        $bot_ranges = $json_data['prefixes']; //ranges retrived
+
+        unset($bot_json);
+        unset($json_file);
+        unset($json_data);
+
+        if (strpos($ip,":") != FALSE) {
+            $ip6 = TRUE;
+        } else {
+            $ip6 = FALSE;
+        }
+
+        foreach ($bot_ranges as $range) {
+            if (isset($range['ipv4Prefix'])) {
+                if(ip4_in_range($ip, $range['ipv4Prefix'])==TRUE) {
+                    $is_google = TRUE;
+                    break;
+                }
+            } elseif ($ip6 == TRUE) {
+                if(ip6_in_range($ip, $range['ipv6Prefix'])==TRUE) {
+                    $is_google = TRUE;
+                    break;
+                }
+            }
+        }
+
+        unset($bot_ranges);
+        unset($ip6);
+
+    }
+    unset($check2);
 
     return $is_google;
 }
